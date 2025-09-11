@@ -89,9 +89,9 @@ sd_ecuador_rating <- sd(chocolate$rating[chocolate$country_of_bean_origin == "Ec
 
 # Data frame with the results
 ecuador_stats <- tibble(
-  `Average Rating` = avg_ecuador_rating,
-  `Standard Deviation` = sd_ecuador_rating,
-  `Total Reviews` = num_ecuador_reviews,
+  mean = avg_ecuador_rating,
+  sd = sd_ecuador_rating,
+  total = num_ecuador_reviews,
 )
 
 # Display table
@@ -158,6 +158,7 @@ head(new_highest_rated_country_of_bean_origin, 3)
 ```{r pt1q7, fig.width=10, fig.height=8}
 
 library(lubridate)
+library(paletteer)
 
 # Create subset of countries of bean origin with at least 50 reviews
 subset_atleast_50_reviews <- chocolate %>%
@@ -180,19 +181,21 @@ subset_atleast_50_reviews <- subset_atleast_50_reviews %>%
 
 # For each country, make a set of four side-by-side boxplots plotting the groups on the x-axis and the rating on the y-axis; facet the boxplots by country of bean origin
 boxplots_choc_ratings <- subset_atleast_50_reviews %>%
-  ggplot(aes(x = percent_chocolate, y = rating)) +
-  geom_boxplot(fill = "tan", color = "black") +
+  ggplot(aes(x = percent_chocolate, y = rating, fill = country_of_bean_origin)) +
+  geom_boxplot() +
+  facet_wrap(~ country_of_bean_origin) +
+  scale_fill_manual(values = paletteer_d("beyonce::X117")) +
   labs(title = "Boxplots of Chocolate Ratings by Cocoa Percent in Each Country of Bean Origin",
        x = "Cocoa Percent Range",
        y = "Rating Score") +
-  facet_wrap(~ country_of_bean_origin) +
   theme(plot.title = element_text(size = 14, face = "bold", color = "black", hjust = 0.5),
-        axis.text.x = element_text(angle = 45, hjust = 1))
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
 
 # Display the boxplots
 boxplots_choc_ratings
 
-# Display table of average ratings by cocoa percent range overall
+# Look at table of average ratings by cocoa percent range overall for comparison
 subset_atleast_50_reviews %>%
   group_by(percent_chocolate) %>%
   summarise(avg_rating = mean(rating, na.rm = TRUE))
@@ -247,13 +250,15 @@ chocolate_w_continent <- chocolate_w_continent %>%
 
 # Make violin plots with ratings on the y-axis and continent on the x-axis
 choc_violin_plot <- chocolate_w_continent %>%
-  ggplot(aes(x = continent, y = rating)) +
-  geom_violin(fill = "aquamarine3", color = "black") +
+  ggplot(aes(x = continent, y = rating, fill = continent)) +
+  geom_violin() +
+  scale_fill_manual(values = paletteer_d("ltc::fernande")) +
   labs(title = "Violin Plots of Chocolate Ratings by Continent",
        x = "Continent",
        y = "Rating Score") +
   theme(plot.title = element_text(size = 14, face = "bold", color = "black", hjust = 0.5),
-        axis.text.x = element_text(angle = 0, hjust = 0.5))
+        axis.text.x = element_text(angle = 0, hjust = 0.5),
+        legend.position = "none")
 
 # Display the violin plot
 choc_violin_plot
@@ -304,30 +309,36 @@ long_choc_ingre_char_by_year
 
 ```{r pt4, fig.width=10, fig.height=8}
 
-library(paletteer)
 library(ggtext)
 
-# Create scatterplots of mean scores of chocolate features by year with a linear trend line for each feature
+# Re-order factor levels so that ingredients are first, followed by characteristics instead of alphabetical order so that they are arranged in a more logical manner in the facets
+long_choc_ingre_char_by_year <- long_choc_ingre_char_by_year %>%
+  mutate(feature = fct_relevel(feature, "beans", "sugar", "cocoa_butter", "vanilla", "letchin", "salt",
+                              "char_cocoa", "char_sweet", "char_nutty", "char_creamy", "char_roasty", "char_earthy"))
+
+# Create scatter plots of mean scores of chocolate features by year with a linear trend line for each feature
 scatterplot_choc_by_year <- long_choc_ingre_char_by_year %>%
   ggplot(aes(x = review_date, y = mean_score)) +
   geom_point(aes(color = feature)) +
-  geom_smooth(method = "loess", se = FALSE, color = "black", linewidth = 0.5) +
-  labs(title = "Scatterplots of Mean Scores for \nChocolate Features by Year",
-       subtitle = "Most chocolate features remained relatively stable over time, with some ingredients (cocoa_butter, lecithin, and vanilla) showing a variation in usage, but little change in noted characteristics except for a slight decrease in reported char_creamy possibly corresponding to decreases in lecithin and vanillla, and a u-shaped trend in char_cocoa corresponding with that of cocoa_butter.",
+  geom_smooth(method = "loess", se = FALSE, color = "black", linewidth = 0.3) +
+  labs(title = "Scatterplots of Mean Proportion of Features Included in Reviewed Chocolate by Year",
+       subtitle = "Most chocolate features remained relatively stable over time. There was little change in noted characteristics except for a slight decrease in reported char_creamy, and a u-shaped trend in char_cocoa. Possible corresponding changes in ingredient usage could be that of lecithin and vanillla decreasing, and cocoa_butter having a slight u-shaped trend, respectively.",
        x = "Year of Review",
-       y = "Mean Score of Ingredient Used or Characteristic Mentioned",
+       y = "Mean Proportion of Ingredients or Characteristics in Chocolate",
        caption = "Mia Silva") +
-  facet_wrap(~ feature) +
+  facet_wrap(~ feature, ncol = 4, dir = "v") +
   theme_bw() +
   theme(plot.title = element_text(size = 14, face = "bold", color = "black", hjust = 0.5),
         axis.text.x = element_text(angle = 45, hjust = 1),
         plot.subtitle = element_textbox_simple(size = 10, hjust = 0.5, margin = margin(b = 10, unit = "pt")),
         legend.position = "none") +
-  scale_colour_manual(values = paletteer_d("RColorBrewer::Set3"))
+  scale_colour_manual(values = paletteer_d("tidyquant::tq_light"))
 
 # Display the scatterplots of mean scores of chocolate features by year
 scatterplot_choc_by_year
 ```
+
+NOTE: the mean_score variable is rather ambiguous in this context, as it translates to the mean proportion of reviews that included a certain ingredient or characteristic. Thus, I made the title and y-axis label more descriptive to clarify this. Mean proportion corresponds to mean score.
 
 ## Part 5: Make the worst plot you can!
 
@@ -359,11 +370,13 @@ bad_plot
 
 -   I chose a color palette where all the colors are different shades of a similar color. This makes it really hard to differentiate between features plotted, so you can't easily see individual trends. This could be desirable for those who are trying to maintain a specific aesthetic, and it may be okay when dealing with a smaller amount of features, but would be inadvisable in general.
 
--   I made the plot background dark gray, which is both jarring to look at and largely unnecessary. There may be other scenarios where a dark background is useful to create contrast, but generally I don't see many situations where this would be desirable.
+-   I made the plot background dark gray, which is both jarring to look at, especially when maintaining a light theme otherwise. There may be other scenarios where a dark background is useful to create contrast, or is aesthetically preferable, but consistency is key and this particular example simply makes the data harder to look at.
 
 -   I added a very thick linear trend line, giving the overall trend of all features, which isn't at all useful in comparing trends between them. This could possibly be useful when trying to get the overall trend for a smaller selection of features that are more closely related. However, the thickness of line is very unlikely to be helpful in most cases.
 
 -   I chose not to give the x and y axis descriptive labels, making it much harder to tell what is being displayed. Generally, I don't think this would help make a better plot in any scenario as it only helps you save time.
+
+-  I rotated the x-axis text 90 degrees, which makes it harder to read. This could be useful if you have a lot of labels that would overlap if they were horizontal, but in this case it is unnecessary. Rotating at a different angle could also help with space and legibility when each label has a longer character length.
 
 -   I added an annotation positioned in a less than ideal spot to "describe" the line. It is hard to read due to the grid lines and does not actually inform us of anything useful and is not necessary in this case. However, having an annotation on a graph in general could potentially be useful to label a specific data point of interest (perhaps an outlier), as you can customize the position and size of this annotation.
 
@@ -386,8 +399,8 @@ chocolate %>%
                position = position_dodge(0.9), 
                linewidth = 0.3, fill = "black", alpha = 0.3) +
   labs(title = "Violin Plot of Ratings of All Chocolate by Year",
-       subtitle = "This plot shows that overall ratings of chocolate improved over the years, with the range of ratings each year getting smaller and clustering to be consistently close to and above 3.0. You can see more distinct patterns of rating distribution clustered at certain values in years 2007, 2009, and 2017.",
-       x = "Year",
+       subtitle = "This plot shows that overall ratings of chocolate improved over the years, with the range of ratings each year getting smaller and clustering to be consistently close to and above 3.0. This indicates more agreemennt amongst reviewers, suggesting consistency in chocolate quality. You can see more distinct patterns of rating distribution clustered at certain values in years 2007, 2009, and 2017.",
+       x = "Year of Review",
        y = "Chocolate Ratings") +
   theme(plot.title = element_text(size = 14, face = "bold", color = "black", hjust = 0.5),
         axis.text.x = element_text(angle = 45, hjust = 1),
@@ -414,7 +427,7 @@ chocolate %>%
 
 -   To make the violin plots themselves the forefront, I chose a simpler theme that made the background of the plot white. Simplifying the theme makes the figure look less cluttered.
 
--   I also got rid of the legend that was off to the side. Since "review_date" was already displayed as "Year" on the x-axis, it was redundant and simply cluttered the plot.
+-   I also got rid of the legend that was off to the side. Since "review_date" was already displayed as "Year of Review" on the x-axis, it was redundant and simply cluttered the plot.
 
 ## R Session Information
 
